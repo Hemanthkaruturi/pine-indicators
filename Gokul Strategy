@@ -1,0 +1,131 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © karuturihemanth
+
+//@version=5
+strategy("Gokul Strategy", overlay=true, margin_long=100, margin_short=100, initial_capital = 100000)
+
+// STEP 1. Create inputs that configure the backtest's date range
+useDateFilter = input.bool(true, title="Filter Date Range of Backtest",
+     group="Backtest Time Period")
+backtestStartDate = input.time(timestamp("1 Jan 2021"), 
+     title="Start Date", group="Backtest Time Period",
+     tooltip="This start date is in the time zone of the exchange " + 
+     "where the chart's instrument trades. It doesn't use the time " + 
+     "zone of the chart or of your computer.")
+backtestEndDate = input.time(timestamp("1 Jan 2022"),
+     title="End Date", group="Backtest Time Period",
+     tooltip="This end date is in the time zone of the exchange " + 
+     "where the chart's instrument trades. It doesn't use the time " + 
+     "zone of the chart or of your computer.")
+
+// STEP 2. See if current bar falls inside the date range
+inTradeWindow = not useDateFilter or (time >= backtestStartDate and
+     time < backtestEndDate)
+
+// get rsi
+nifty_rsi = ta.rsi(close, 9)
+
+// get adx
+// ADX 1
+len = input(8)
+TrueRange = math.max(math.max(high - low, math.abs(high - nz(close[1]))), math.abs(low - nz(close[1])))
+DirectionalMovementPlus = high - nz(high[1]) > nz(low[1]) - low ? math.max(high - nz(high[1]), 0) : 0
+DirectionalMovementMinus = nz(low[1]) - low > high - nz(high[1]) ? math.max(nz(low[1]) - low, 0) : 0
+
+SmoothedTrueRange = 0.0
+SmoothedTrueRange := nz(SmoothedTrueRange[1]) - nz(SmoothedTrueRange[1]) / len + TrueRange
+
+SmoothedDirectionalMovementPlus = 0.0
+SmoothedDirectionalMovementPlus := nz(SmoothedDirectionalMovementPlus[1]) - nz(SmoothedDirectionalMovementPlus[1]) / len + DirectionalMovementPlus
+
+SmoothedDirectionalMovementMinus = 0.0
+SmoothedDirectionalMovementMinus := nz(SmoothedDirectionalMovementMinus[1]) - nz(SmoothedDirectionalMovementMinus[1]) / len + DirectionalMovementMinus
+
+DIPlus = SmoothedDirectionalMovementPlus / SmoothedTrueRange * 100
+DIMinus = SmoothedDirectionalMovementMinus / SmoothedTrueRange * 100
+DX = math.abs(DIPlus - DIMinus) / (DIPlus + DIMinus) * 100
+adx = ta.sma(DX, len)
+
+
+// Calculate ADX momentum
+// ADX1
+adxlen1 = input(8, title="ADX Smoothing")
+dilen1 = input(14, title="DI Length")
+dirmov1(len) =>
+	up1 = ta.change(high[1])
+	down1 = -ta.change(low[1])
+	plusDM1 = na(up1) ? na : (up1 > down1 and up1 > 0 ? up1 : 0)
+	minusDM1 = na(down1) ? na : (down1 > up1 and down1 > 0 ? down1 : 0)
+	truerange1 = ta.rma(ta.tr, len)
+	plus1 = fixnan(100 * ta.rma(plusDM1, len) / truerange1)
+	minus1 = fixnan(100 * ta.rma(minusDM1, len) / truerange1)
+	[plus1, minus1]
+adx1(dilen1, adxlen1) =>
+	[plus1, minus1] = dirmov1(dilen1)
+	sum1 = plus1 + minus1
+	adx1 = 100 * ta.rma(math.abs(plus1 - minus1) / (sum1 == 0 ? 1 : sum1), adxlen1)
+sig1 = adx1(dilen1, adxlen1)
+// plot(sig, color=color.red, title="ADX")
+
+// ADX 2
+TrueRange1 = math.max(math.max(high[1] - low[1], math.abs(high[1] - nz(close[2]))), math.abs(low[1] - nz(close[2])))
+DirectionalMovementPlus1 = high[1] - nz(high[2]) > nz(low[2]) - low ? math.max(high[1] - nz(high[2]), 0) : 0
+DirectionalMovementMinus1 = nz(low[2]) - low[1] > high[1] - nz(high[2]) ? math.max(nz(low[2]) - low[1], 0) : 0
+
+SmoothedTrueRange1 = 0.0
+SmoothedTrueRange1 := nz(SmoothedTrueRange1[1]) - nz(SmoothedTrueRange1[1]) / len + TrueRange1
+
+SmoothedDirectionalMovementPlus1 = 0.0
+SmoothedDirectionalMovementPlus1 := nz(SmoothedDirectionalMovementPlus1[1]) - nz(SmoothedDirectionalMovementPlus1[1]) / len + DirectionalMovementPlus1
+
+SmoothedDirectionalMovementMinus1 = 0.0
+SmoothedDirectionalMovementMinus1 := nz(SmoothedDirectionalMovementMinus1[1]) - nz(SmoothedDirectionalMovementMinus1[1]) / len + DirectionalMovementMinus1
+
+DIPlus1 = SmoothedDirectionalMovementPlus1 / SmoothedTrueRange1 * 100
+DIMinus1 = SmoothedDirectionalMovementMinus1 / SmoothedTrueRange1 * 100
+DX1 = math.abs(DIPlus1 - DIMinus1) / (DIPlus1 + DIMinus1) * 100
+ADX1 = ta.sma(DX1, len)
+
+adx_momentum = math.abs(adx-ADX1)
+
+// get EMA
+ema_5 = ta.ema(close, 5)
+ema_13 = ta.ema(close, 13)
+
+// after 9:25 condition
+start_cond = true
+if (hour(time) == 09)
+    if (minute(time) <= 25)
+        start_cond := false
+    if (minute(time) > 25)
+        start_cond := true
+
+// after 15:25 condition
+end_cond = true
+if (hour(time) == 15)
+    if (minute(time) >= 15)
+        end_cond := false
+    if (minute(time) < 15)
+        end_cond := true
+
+// buy condition - after 9:25
+if (adx > 20 and nifty_rsi > 60 and (ema_13<ema_5) and start_cond and end_cond and adx_momentum >= 1 and inTradeWindow)
+    strategy.entry("Buy", strategy.long)
+
+// sell condition - after 9:25
+if (adx <= 20 and nifty_rsi < 40 and (ema_13>ema_5) and start_cond and end_cond and adx_momentum >= 1 and inTradeWindow)
+    strategy.entry("Sell", strategy.short)
+
+// buy exit condition
+if (adx < 20 or (nifty_rsi < 60) or (ema_13>ema_5))
+    strategy.close("Buy")
+
+// sell exit condition
+if (adx < 20 or (nifty_rsi > 40) or (ema_13<ema_5))
+    strategy.close("Sell")
+
+// sell long and short end of the day
+// exit at 15:25
+if (hour(time) == 15 and minute(time) == 15) or (adx>45)
+    strategy.close("Sell")
+    strategy.close("Buy")

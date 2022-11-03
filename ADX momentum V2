@@ -1,0 +1,51 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © BeikabuOyaji
+
+//@version=5
+
+
+indicator('ADX momentum')
+len = input(8)
+th = input(1)
+
+// ADX 1
+TrueRange = math.max(math.max(high - low, math.abs(high - nz(close[1]))), math.abs(low - nz(close[1])))
+DirectionalMovementPlus = high - nz(high[1]) > nz(low[1]) - low ? math.max(high - nz(high[1]), 0) : 0
+DirectionalMovementMinus = nz(low[1]) - low > high - nz(high[1]) ? math.max(nz(low[1]) - low, 0) : 0
+
+SmoothedTrueRange = 0.0
+SmoothedTrueRange := nz(SmoothedTrueRange[1]) - nz(SmoothedTrueRange[1]) / len + TrueRange
+
+SmoothedDirectionalMovementPlus = 0.0
+SmoothedDirectionalMovementPlus := nz(SmoothedDirectionalMovementPlus[1]) - nz(SmoothedDirectionalMovementPlus[1]) / len + DirectionalMovementPlus
+
+SmoothedDirectionalMovementMinus = 0.0
+SmoothedDirectionalMovementMinus := nz(SmoothedDirectionalMovementMinus[1]) - nz(SmoothedDirectionalMovementMinus[1]) / len + DirectionalMovementMinus
+
+DIPlus = SmoothedDirectionalMovementPlus / SmoothedTrueRange * 100
+DIMinus = SmoothedDirectionalMovementMinus / SmoothedTrueRange * 100
+DX = math.abs(DIPlus - DIMinus) / (DIPlus + DIMinus) * 100
+ADX = ta.sma(DX, len)
+
+// ADX 2
+TrueRange1 = math.max(math.max(high[1] - low[1], math.abs(high[1] - nz(close[2]))), math.abs(low[1] - nz(close[2])))
+DirectionalMovementPlus1 = high[1] - nz(high[2]) > nz(low[2]) - low ? math.max(high[1] - nz(high[2]), 0) : 0
+DirectionalMovementMinus1 = nz(low[2]) - low[1] > high[1] - nz(high[2]) ? math.max(nz(low[2]) - low[1], 0) : 0
+
+SmoothedTrueRange1 = 0.0
+SmoothedTrueRange1 := nz(SmoothedTrueRange1[1]) - nz(SmoothedTrueRange1[1]) / len + TrueRange1
+
+SmoothedDirectionalMovementPlus1 = 0.0
+SmoothedDirectionalMovementPlus1 := nz(SmoothedDirectionalMovementPlus1[1]) - nz(SmoothedDirectionalMovementPlus1[1]) / len + DirectionalMovementPlus1
+
+SmoothedDirectionalMovementMinus1 = 0.0
+SmoothedDirectionalMovementMinus1 := nz(SmoothedDirectionalMovementMinus1[1]) - nz(SmoothedDirectionalMovementMinus1[1]) / len + DirectionalMovementMinus1
+
+DIPlus1 = SmoothedDirectionalMovementPlus1 / SmoothedTrueRange1 * 100
+DIMinus1 = SmoothedDirectionalMovementMinus1 / SmoothedTrueRange1 * 100
+DX1 = math.abs(DIPlus1 - DIMinus1) / (DIPlus1 + DIMinus1) * 100
+ADX1 = ta.sma(DX1, len)
+
+plot(math.abs(ADX-ADX1), color=color.new(color.navy, 0), title='ADX')
+hline(th, color=color.black)
+

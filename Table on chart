@@ -1,0 +1,108 @@
+//@version=5
+indicator("Table on chart", "", true)
+// We use `var` to only initialize the table on the first bar.
+var table atrDisplay = table.new(position.top_right, 2, 4)
+// We call `ta.atr()` outside the `if` block so it executes on each bar.
+r1 = "RSI"
+rasi_9 = ta.rsi(close, 9)
+
+// get adx
+len = input.int(8, minval=1, title='DI Length')
+lensig = input.int(14, title='ADX Smoothing', minval=1, maxval=50)
+[_, _, adx] = ta.dmi(len, lensig)
+
+r2 = "ADX"
+
+// ADX1
+adxlen1 = input(8, title="ADX Smoothing")
+dilen1 = input(14, title="DI Length")
+dirmov1(len) =>
+	up1 = ta.change(high[1])
+	down1 = -ta.change(low[1])
+	plusDM1 = na(up1) ? na : (up1 > down1 and up1 > 0 ? up1 : 0)
+	minusDM1 = na(down1) ? na : (down1 > up1 and down1 > 0 ? down1 : 0)
+	truerange1 = ta.rma(ta.tr, len)
+	plus1 = fixnan(100 * ta.rma(plusDM1, len) / truerange1)
+	minus1 = fixnan(100 * ta.rma(minusDM1, len) / truerange1)
+	[plus1, minus1]
+adx1(dilen1, adxlen1) =>
+	[plus1, minus1] = dirmov1(dilen1)
+	sum1 = plus1 + minus1
+	adx1 = 100 * ta.rma(math.abs(plus1 - minus1) / (sum1 == 0 ? 1 : sum1), adxlen1)
+sig1 = adx1(dilen1, adxlen1)
+// plot(sig, color=color.red, title="ADX")
+
+// ADX2
+adxlen = input(8, title="ADX Smoothing")
+dilen = input(14, title="DI Length")
+dirmov(len) =>
+	up = ta.change(high)
+	down = -ta.change(low)
+	plusDM = na(up) ? na : (up > down and up > 0 ? up : 0)
+	minusDM = na(down) ? na : (down > up and down > 0 ? down : 0)
+	truerange = ta.rma(ta.tr, len)
+	plus = fixnan(100 * ta.rma(plusDM, len) / truerange)
+	minus = fixnan(100 * ta.rma(minusDM, len) / truerange)
+	[plus, minus]
+adx2(dilen, adxlen) =>
+	[plus, minus] = dirmov(dilen)
+	sum = plus + minus
+	adx2 = 100 * ta.rma(math.abs(plus - minus) / (sum == 0 ? 1 : sum), adxlen)
+sig = adx2(dilen, adxlen)
+
+adx_momentum = math.abs(sig-sig1)
+
+r3 = "ADX mom"
+
+// get EMA
+ema_5 = ta.ema(close, 5)
+ema_13 = ta.ema(close, 13)
+
+// prepare bg colors
+rsi_color = rasi_9 > 60 ? color.green : rasi_9 < 40 ? color.red: color.gray
+adx_color = adx > 20 ? color.green: color.gray
+adx_momentum_color = adx_momentum > 1 ? color.green: color.gray
+
+// buy or sell message
+// buy condition
+message = 'Pause'
+if (adx > 20 and rasi_9 > 60 and (ema_13<ema_5) and adx_momentum >= 1)
+    message := 'Buy'
+
+// sell condition
+if (adx > 20 and rasi_9 < 40 and (ema_13>ema_5) and adx_momentum >= 1)
+    message := 'Sell'
+
+// buy exit condition
+// if (adx < 20 or (rasi_9 < 60) or (ema_13>ema_5))
+//     message := "Exit buy"
+
+// sell exit condition
+// if (adx < 20 or (rasi_9 > 40) or (ema_13<ema_5))
+//     message := "Exit sell"
+
+// pause
+if (rasi_9 < 60 and rasi_9 > 40) or adx_momentum < 1
+	message := "Pause"
+
+// book profits
+if (adx>45)
+    message := 'Book profits'
+
+// sell long and short end of the day
+// exit at 15:25
+if (hour(time) == 15 and minute(time) == 15)
+    message := "Exit"
+
+r4 = "Suggestion"
+
+if barstate.islast
+    // We only populate the table on the last bar.
+    table.cell(atrDisplay, 0, 0, str.tostring(r1), bgcolor = color.gray)
+    table.cell(atrDisplay, 1, 0, str.tostring(rasi_9), bgcolor = rsi_color)
+    table.cell(atrDisplay, 0, 1, str.tostring(r2), bgcolor = color.gray)
+    table.cell(atrDisplay, 1, 1, str.tostring(adx), bgcolor = adx_color)
+    table.cell(atrDisplay, 0, 2, str.tostring(r3), bgcolor = color.gray)
+    table.cell(atrDisplay, 1, 2, str.tostring(adx_momentum), bgcolor = adx_momentum_color)
+	table.cell(atrDisplay, 0, 3, str.tostring(r4), bgcolor = color.gray)
+    table.cell(atrDisplay, 1, 3, str.tostring(message), bgcolor = color.gray)

@@ -1,0 +1,61 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © karuturihemanth
+
+//@version=5
+indicator("hmnk base")
+
+// create input checkboxes
+rsi_input = input.bool(true,"RSI")
+ema_input = input.bool(true,"EMA")
+wma_input = input.bool(true,"WMA")
+fill_input = input.bool(false, "Fill color")
+
+nifty_close = close
+
+nifty_rsi = ta.rsi(nifty_close, 9)
+nifty_ema = ta.ema(nifty_rsi, 3)
+nifty_wma = ta.wma(nifty_rsi, 21)
+
+// nifty_c1 = ta.crossover(nifty_ema, nifty_wma)
+nifty_c1 = nifty_ema >= nifty_wma
+nifty_c2 = nifty_ema - nifty_wma >= 4
+nifty_c3 = nifty_close[1] > ta.sma(nifty_close, 20)
+nifty_c4 = nifty_close > ta.sma(nifty_close, 20)
+
+if (nifty_c1 and nifty_c2) and (nifty_c3 or nifty_c4)
+    // alert("NIFTY Buy condition activate! \n ema: " + str.tostring(nifty_ema) + " wma: " +str.tostring(nifty_wma), alert.freq_once_per_bar)
+    alert("SYMBOL: NIFTY1 \n TYPE:LE")
+
+// nifty_c12 = ta.crossover(nifty_wma, nifty_ema)
+nifty_c12 = nifty_wma >= nifty_ema
+nifty_c22 = nifty_wma - nifty_ema >= 4
+
+if (nifty_c12 and nifty_c22)
+    // alert("NIFTY Sell condition activate! \n ema: " + str.tostring(nifty_ema) + " wma: " +str.tostring(nifty_wma), alert.freq_once_per_bar)
+    alert("SYMBOL: NIFTY1 \n TYPE:LX")
+
+if not rsi_input
+    nifty_rsi := na
+
+if not ema_input
+    nifty_ema := na
+
+if not wma_input
+    nifty_wma := na
+
+p1 = plot(nifty_rsi, title="RSI", color=color.gray)
+
+nifty_p2 = plot(nifty_ema, title="EMA", color=color.orange)
+nifty_p3 = plot(nifty_wma, title="WMA", color=color.yellow)
+
+nifty_coloring = nifty_ema > nifty_wma ? color.orange: color.red
+
+if not fill_input
+    nifty_coloring := na
+
+fill(nifty_p2, nifty_p3, color=nifty_coloring, title="Fill")
+
+// Add lines
+hline(60, color = color.green, linestyle = hline.style_solid)
+hline(50)
+hline(40, color = color.red, linestyle = hline.style_solid)

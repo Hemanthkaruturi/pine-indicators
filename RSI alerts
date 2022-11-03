@@ -1,0 +1,42 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © karuturihemanth
+
+//@version=5
+indicator("Custom Strategy")
+
+// get rsi
+nifty_rsi = ta.rsi(close, 9)
+
+// get adx
+len = input.int(8, minval=1, title='DI Length')
+lensig = input.int(14, title='ADX Smoothing', minval=1, maxval=50)
+[_, _, adx] = ta.dmi(len, lensig)
+
+// get EMA
+ema_5 = ta.ema(close, 5)
+ema_13 = ta.ema(close, 13)
+
+// buy condition
+if (adx > 20 and nifty_rsi > 60 and (ema_13<ema_5))
+    alert('Buy now')
+
+// sell condition
+if (adx <= 20 and nifty_rsi < 40 and (ema_13>ema_5))
+    alert('Sell now')
+
+// buy exit condition
+if (adx < 20 or (nifty_rsi < 45) or (ema_13>ema_5))
+    alert("Exit buy")
+
+// sell exit condition
+if (adx < 20 or (nifty_rsi >= 55) or (ema_13<ema_5))
+    alert("Exit sell")
+
+// book profits
+if (adx>45)
+    alert('Book profits')
+
+// sell long and short end of the day
+// exit at 15:25
+if (hour(time) == 15 and minute(time) == 15)
+    alert("Exit now")

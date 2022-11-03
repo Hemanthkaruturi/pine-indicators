@@ -1,0 +1,14 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © karuturihemanth
+
+//@version=5
+indicator("EMA Indicator", overlay = true)
+
+// rsi = ta.rsi(close, 14)
+ema_5 = ta.ema(close, 5)
+ema_13 = ta.ema(close, 13)
+
+
+
+plot(ema_5, title = 'EMA 5', color = color.yellow)
+plot(ema_13, title = 'EMA 13', color = color.red)
